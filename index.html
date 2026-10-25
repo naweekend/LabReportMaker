@@ -1,0 +1,1062 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lab Report Maker</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<style>
+  :root { --blue:#1a73e8; --ink:#202124; --muted:#5f6368; --line:#dadce0; --bg:#f6f8fc; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif; background:var(--bg); color:var(--ink); }
+  main { max-width:780px; margin:0 auto; padding:40px 20px 80px; }
+  h1 { font-size:28px; margin:0 0 4px; color:var(--blue); }
+  .lead { color:var(--muted); margin:0 0 28px; }
+  section { background:#fff; border:1px solid var(--line); border-radius:12px; padding:20px; margin-bottom:18px; }
+  h2 { font-size:15px; margin:0 0 14px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); }
+  h3 { font-size:13px; margin:18px 0 8px; color:var(--ink); }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .grid3 { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+  .grid .full { grid-column:1 / -1; }
+  label { display:block; font-size:13px; color:var(--muted); margin-bottom:4px; }
+  input[type=text], select, textarea { width:100%; padding:9px 11px; border:1px solid var(--line); border-radius:8px; font:inherit; background:#fff; color:var(--ink); }
+  input[type=text]:focus, select:focus, textarea:focus { outline:2px solid var(--blue); outline-offset:-1px; border-color:var(--blue); }
+  textarea { font-family:ui-monospace,Menlo,Consolas,monospace; font-size:13px; min-height:64px; resize:vertical; }
+  #drop, #ndrop { border:2px dashed #b6c2d6; border-radius:12px; padding:28px; text-align:center; color:var(--muted); cursor:pointer; transition:.15s; }
+  #drop.over, #ndrop.over { border-color:var(--blue); background:#eef4fe; color:var(--blue); }
+  #drop strong, #ndrop strong { color:var(--blue); }
+  .file { border:1px solid var(--line); border-radius:10px; padding:12px 14px; margin-top:12px; }
+  .file-head { display:flex; justify-content:space-between; align-items:center; gap:10px; }
+  .file-name { font-weight:600; word-break:break-all; }
+  .tag { font-size:12px; color:var(--blue); background:#e8f0fe; border-radius:20px; padding:2px 10px; white-space:nowrap; }
+  .rm { border:0; background:none; color:var(--muted); font-size:20px; cursor:pointer; line-height:1; }
+  .rm:hover { color:#d93025; }
+  .hint { font-size:12px; color:var(--muted); margin:8px 0 4px; }
+  .none { font-size:12px; color:var(--muted); margin-top:6px; }
+  button.go { width:100%; padding:14px; font-size:16px; font-weight:600; color:#fff; background:var(--blue); border:0; border-radius:10px; cursor:pointer; }
+  button.go:disabled { background:#9bbcf0; cursor:default; }
+  button.ghost { border:1px solid var(--line); background:#fff; color:var(--ink); border-radius:8px; padding:9px 14px; font:inherit; cursor:pointer; }
+  button.ghost:hover { border-color:var(--blue); color:var(--blue); }
+  #status, #nstatus { margin-top:14px; font-size:14px; min-height:20px; }
+  #status.err, #nstatus.err { color:#d93025; white-space:pre-wrap; }
+  #status.ok, #nstatus.ok { color:#188038; }
+  .warn { background:#fef7e0; border:1px solid #f9d77e; border-radius:10px; padding:12px 14px; margin-bottom:18px; font-size:14px; }
+  .warn[hidden] { display:none; }
+  .warn.info { background:#e8f0fe; border-color:#b6c9f0; }
+  .warn.bad  { background:#fce8e6; border-color:#f4b4ae; }
+  .bar { height:4px; border-radius:2px; background:#c9d7f2; margin-top:8px; overflow:hidden; }
+  .bar > i { display:block; height:100%; width:0; background:var(--blue); transition:width .2s; }
+  #status .note, #nstatus .note { display:block; color:var(--muted); }
+
+  /* formatting panel */
+  .topbar { display:grid; grid-template-columns:1fr 1fr 1fr auto; gap:12px; align-items:end; }
+  details { margin-top:16px; border-top:1px solid var(--line); padding-top:12px; }
+  summary { cursor:pointer; font-weight:600; color:var(--blue); list-style:none; }
+  summary::-webkit-details-marker { display:none; }
+  summary::before { content:"\25B8  "; }
+  details[open] > summary::before { content:"\25BE  "; }
+  .ctl .row { display:flex; align-items:center; gap:10px; }
+  .ctl input[type=range] { flex:1; accent-color:var(--blue); }
+  .ctl .val { min-width:54px; text-align:right; font-size:12px; color:var(--muted); font-variant-numeric:tabular-nums; }
+  .ctl input[type=color] { width:100%; height:36px; padding:2px; border:1px solid var(--line); border-radius:8px; background:#fff; cursor:pointer; }
+  .check { display:flex; align-items:center; gap:8px; font-size:14px; color:var(--ink); margin:0; padding:6px 0; cursor:pointer; }
+  .check input { width:16px; height:16px; accent-color:var(--blue); }
+
+  /* live preview */
+  .pvwrap { margin-top:18px; }
+  .pv { border:1px solid var(--line); border-radius:8px; padding:18px 20px; overflow:hidden; }
+  .pv pre { margin:0; white-space:pre; overflow:hidden; }
+  .pv .t { font-weight:700; }
+  .pvnote { font-size:12px; color:var(--muted); margin-top:6px; }
+
+  .pvpair { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:14px; align-items:start; }
+  .pvcol .pvcap { font-size:12px; font-weight:600; color:var(--muted); margin:0 0 6px; text-transform:none; }
+  .pv2 { border:1px solid var(--line); border-radius:8px; padding:18px 20px; overflow:hidden; }
+  .pv2 .t { font-weight:700; }
+  .pvpage { margin-top:12px; border:1px dashed rgba(128,128,128,.55); border-radius:6px; padding:10px 12px; }
+  .pvpage .ln { height:1px; background:currentColor; opacity:.28; margin:9px 0; }
+  .pvpage .hw { font-family:"Segoe Print","Bradley Hand","Comic Sans MS",cursive; color:#1a3fa8; font-size:12px; margin:2px 0; }
+  @media (max-width:760px) { .pvpair { grid-template-columns:1fr; } }
+
+  .shared { background:#e8f0fe; border:1px solid #b6c9f0; border-radius:10px; padding:10px 14px; margin:-4px 0 16px; font-size:14px; }
+  .part { margin-top:34px; padding-top:22px; border-top:2px solid var(--line); }
+  .part h2 { display:flex; align-items:center; flex-wrap:wrap; gap:10px; }
+  .part .badge { font-size:12px; font-weight:600; color:#fff; background:var(--blue); border-radius:20px; padding:2px 10px; letter-spacing:.02em; }
+  .part .sub { color:var(--muted); font-size:14px; margin:-6px 0 16px; }
+  .part .sub b { color:var(--ink); }
+  /* algorithms / dry-run images */
+  #notes { margin-top:34px; }
+  #notes .sub { color:var(--muted); font-size:14px; margin:-6px 0 16px; }
+  .nrow { display:grid; grid-template-columns:auto auto 56px minmax(0,1fr) auto; gap:10px; align-items:center; border:1px solid var(--line); border-radius:10px; padding:8px 10px; margin-top:8px; background:#fff; }
+  .nrow.dragging { opacity:.4; }
+  .nrow.target { border-color:var(--blue); box-shadow:0 0 0 2px #cfe0fb; }
+  .grip { cursor:grab; color:#9aa0a6; font-size:18px; line-height:1; user-select:none; }
+  .npos { font-weight:700; color:var(--blue); min-width:22px; text-align:right; font-variant-numeric:tabular-nums; }
+  .nthumb { width:56px; height:56px; object-fit:cover; border-radius:6px; border:1px solid var(--line); background:#f1f3f4; }
+  .nname { font-size:13px; font-weight:600; word-break:break-all; }
+  .ninfo { font-size:11px; color:var(--muted); }
+  .nbtns { display:flex; gap:4px; }
+  .nbtns button { border:1px solid var(--line); background:#fff; border-radius:6px; width:30px; height:30px; cursor:pointer; color:var(--ink); font-size:15px; line-height:1; }
+  .nbtns button:hover:not(:disabled) { border-color:var(--blue); color:var(--blue); }
+  .nbtns button:disabled { opacity:.35; cursor:default; }
+  .nbtns .del:hover:not(:disabled) { border-color:#d93025; color:#d93025; }
+  #norderinfo { margin:14px 0 0; }
+  #ndrop { margin-top:14px; }
+  @media (max-width:640px) { .nrow { grid-template-columns:auto 56px minmax(0,1fr); } .nrow .grip { display:none; } .nrow .nbtns { grid-column:1 / -1; justify-content:flex-end; } }
+
+  /* view code */
+  .codebox { margin-top:8px; border:1px solid var(--line); border-radius:8px; background:#f6f8fa; max-height:380px; overflow:auto;
+             font:12.5px/1.55 ui-monospace,Menlo,Consolas,monospace; color:#24292f; }
+  .cl { display:flex; min-width:max-content; }
+  .cl.has { background:#fffbe6; }
+  .ln { flex:none; position:sticky; left:0; width:3.4em; text-align:right; padding:0 10px 0 6px; color:#8c959f; background:#eef0f3; border-right:1px solid var(--line); user-select:none; }
+  .cl.has .ln { background:#fdf3c8; color:#7a5d00; }
+  .ct { white-space:pre; tab-size:4; padding:0 14px 0 12px; }
+  mark.rd { background:#ffe58f; color:inherit; border-radius:3px; padding:0 2px; margin:0 -1px; cursor:pointer; box-shadow:0 0 0 1px #f0c36a inset; }
+  mark.rd:hover { background:#ffd24d; }
+  mark.rd.active { background:#ffb300; box-shadow:0 0 0 2px #e68a00; }
+  .vval.flash { outline:3px solid #ffb300; outline-offset:-1px; }
+  .cvmeta { font-weight:400; color:var(--muted); font-size:12px; }
+
+  /* detected input variables */
+  .vars { display:grid; gap:8px; margin-top:8px; }
+  .var { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.3fr); gap:10px; align-items:start; }
+  .vlabel { display:flex; align-items:center; flex-wrap:wrap; gap:4px 8px; min-width:0; padding-top:7px; }
+  .vname { font-family:ui-monospace,Menlo,Consolas,monospace; font-size:13px; font-weight:600; word-break:break-all; }
+  .vtype { font-family:ui-monospace,Menlo,Consolas,monospace; font-size:12px; color:#0b57d0; background:#e8f0fe; border-radius:6px; padding:1px 8px; white-space:nowrap; }
+  .vtype.unk { color:var(--muted); background:#f1f3f4; }
+  .vmeta { font-size:11px; color:var(--muted); width:100%; }
+  .vval { font-family:ui-monospace,Menlo,Consolas,monospace; font-size:13px; }
+  textarea.vval { min-height:38px; height:38px; }
+
+  .vstack { display:grid; gap:6px; min-width:0; }
+  .vcap { font-size:12px; color:var(--muted); padding-top:2px; }
+  .vitem { display:flex; align-items:center; gap:8px; }
+  .vitem .vval { flex:1; min-width:0; }
+  .vnum { flex:none; min-width:28px; text-align:center; font-size:12px; font-weight:700; color:var(--blue); background:#e8f0fe; border-radius:6px; padding:3px 6px; font-variant-numeric:tabular-nums; }
+  .vdel { flex:none; width:28px; height:28px; border:1px solid var(--line); background:#fff; border-radius:6px; color:var(--muted); font-size:16px; line-height:1; cursor:pointer; }
+  .vdel:hover { border-color:#d93025; color:#d93025; }
+  .vadd { justify-self:start; border:1px dashed #9bbcf0; background:#f4f8ff; color:var(--blue); border-radius:8px; padding:5px 12px; font-size:13px; font-weight:600; cursor:pointer; }
+  .vadd:hover { background:#e8f0fe; border-style:solid; }
+  .vnote { font-size:11px; color:var(--muted); }
+  .vval.bad { border-color:#d93025; background:#fce8e6; }
+  .vmsg { grid-column:1 / -1; font-size:12px; margin:-2px 0 0; }
+  .vmsg.warn { color:#b06000; }
+  .vmsg.bad { color:#d93025; }
+  .override .vars { opacity:.4; pointer-events:none; }
+  .rawnote { font-size:12px; color:#b06000; margin:0 0 6px; }
+  .rawnote[hidden] { display:none; }
+  .file details { margin-top:12px; padding-top:10px; }
+  .file details summary { font-size:13px; font-weight:500; }
+  @media (max-width:640px) { .topbar, .grid, .grid3, .var { grid-template-columns:1fr; } .vlabel { padding-top:0; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>Lab Report Maker</h1>
+  <p class="lead">Make two PDFs for your lab: <b>(1)</b> a lab report with each task's code and its real output, and <b>(2)</b> an Algorithms, Pseudocodes &amp; Dry Runs file from photos of your handwritten work. Everything runs in your browser and nothing is uploaded anywhere.</p>
+  <div class="shared"><b>Shared settings:</b> the Title page and Formatting sections below apply to <b>both PDFs</b> (the lab report and the Algorithms, Pseudocodes &amp; Dry Runs file), so they always match.</div>
+
+  <div class="warn" id="engine" hidden></div>
+
+  <section>
+    <h2>Title page <span class="cvmeta">· used by both PDFs</span></h2>
+    <div class="grid">
+      <div class="full"><label for="title">Title</label><input id="title" type="text" value="PF LAB 5"></div>
+      <div><label for="name">Name</label><input id="name" type="text" value="Sample Name"></div>
+      <div><label for="sid">Roll number</label><input id="sid" type="text" value="260201999"></div>
+      <div><label for="section">Section</label><input id="section" type="text" value="CS 07 A"></div>
+      <div><label for="extra">Extra line (optional)</label><input id="extra" type="text" placeholder="e.g. Programming Fundamentals"></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Formatting <span class="cvmeta">· theme and layout apply to both PDFs</span></h2>
+    <div class="topbar">
+      <div><label for="preset">Layout</label><select id="preset"></select></div>
+      <div><label for="theme">Theme</label><select id="theme"></select></div>
+      <div><label for="syntax">Syntax highlighting</label><select id="syntax"></select></div>
+      <div><button class="ghost" id="reset" type="button">Reset</button></div>
+    </div>
+
+    <p class="hint" style="margin:10px 0 0">Syntax highlighting colours the code in the lab report (keywords, strings, comments, numbers and so on). Picking a highlighting theme also sets the code box background to match it; the output box is not changed.</p>
+    <div class="pvwrap">
+      <div class="pvpair">
+        <div class="pvcol">
+          <div class="pvcap">Code lab report</div>
+          <div class="pv" id="pv">
+            <div id="pvTitle" class="t">PF LAB 5</div>
+            <div id="pvInfo">Name &middot; Roll number</div>
+            <div id="pvHead" class="t">Task 1</div>
+            <pre id="pvCode"></pre>
+            <div id="pvLabel" class="t">Output</div>
+            <pre id="pvOut"></pre>
+          </div>
+        </div>
+        <div class="pvcol">
+          <div class="pvcap">Algorithms, pseudocodes &amp; dry runs</div>
+          <div class="pv2" id="pv2">
+            <div id="pv2Title" class="t">PF LAB 5</div>
+            <div id="pv2Info"></div>
+            <div class="pvpage" id="pv2Page">
+              <div class="hw">Task 1 Algorithm (FOR)</div>
+              <div class="ln"></div>
+              <div class="hw">1. Loop i = 1 to 10</div>
+              <div class="ln"></div>
+              <div class="hw">2. DISPLAY i * i</div>
+              <div class="ln"></div>
+              <div class="hw">Task 1 Pseudocode (FOR)</div>
+              <div class="ln"></div>
+              <div class="hw">START ... END</div>
+              <div class="ln"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="pvnote">Live preview (approximate). The PDF uses exact sizes. Right: title page of the handwritten-work PDF, then a sample image page.</div>
+    </div>
+
+    <details>
+      <summary>Customize fonts, spacing, colors and more</summary>
+      <div id="custom"></div>
+    </details>
+  </section>
+
+  <section class="part" id="report">
+    <h2><span class="badge">PDF 1</span> Lab report (code &amp; output)</h2>
+    <p class="sub">Add your <b>.cpp files</b>. Each one is compiled and run in your browser, and the PDF shows a title page, then every task's code followed by its output. Uses the Title page and Formatting settings above.</p>
+    <div id="drop"><strong>Click to choose</strong> or drag .cpp files here<br><span style="font-size:12px">Tasks are ordered by the number in the file name (task1, task2, ...)</span></div>
+    <input id="picker" type="file" accept=".cpp,.cc,.cxx,.c++" multiple hidden>
+    <div id="list"></div>
+  </section>
+
+  <button class="go" id="go" disabled>Generate Lab Report PDF</button>
+  <div id="status"></div>
+
+  <section id="notes" class="part">
+    <h2><span class="badge">PDF 2</span> Algorithms, pseudocodes &amp; dry runs</h2>
+    <p class="sub">Add <b>photos or scans of your handwritten work</b>. They become a separate PDF: the same title page and theme as the lab report, then one image per page, in order. Uses the Title page and Formatting settings above.</p>
+
+    <div class="grid">
+      <div class="full"><label for="heading">Heading shown under the title</label><input id="heading" type="text" value="Algorithms, Pseudocodes &amp; Dry Runs"></div>
+      <div>
+        <label for="nOrder">Page order</label>
+        <select id="nOrder">
+          <option value="auto">Automatic (best guess from the file names)</option>
+          <option value="date">Date &amp; time in the file names</option>
+          <option value="number">Numbers in the file names</option>
+          <option value="name">File name, A to Z</option>
+          <option value="modified">Date the file was last modified</option>
+          <option value="manual">Manual (my own arrangement)</option>
+        </select>
+      </div>
+      <div>
+        <label for="nQuality">Image quality</label>
+        <select id="nQuality">
+          <option value="balanced">Balanced (recommended)</option>
+          <option value="high">High (bigger file)</option>
+          <option value="small">Small file</option>
+        </select>
+      </div>
+      <div class="ctl"><label>Margin around each image</label><div class="row"><input type="range" id="nMargin" min="0" max="80" step="2" value="24"><span class="val" id="nMarginVal"></span></div></div>
+      <div>
+        <label for="nAlign">Image position on the page</label>
+        <select id="nAlign"><option value="top">Top (like a scanned page)</option><option value="middle">Centered</option></select>
+      </div>
+    </div>
+
+    <div id="ndrop"><strong>Click to choose</strong> or drag images here<br><span style="font-size:12px">JPG, PNG, WebP. Order is worked out from the file names (dates, timestamps or numbers). You can rearrange them afterwards.</span></div>
+    <input id="npicker" type="file" accept="image/*" multiple hidden>
+    <div class="hint" id="norderinfo" hidden></div>
+    <div id="nlist"></div>
+
+    <button class="go" id="ngo" disabled style="margin-top:18px">Generate Algorithms PDF</button>
+    <div id="nstatus"></div>
+  </section>
+</main>
+
+<script src="lib/jspdf.umd.min.js"></script>
+<script src="fonts/fonts.js"></script>
+<script src="highlight.js"></script>
+<script src="pdfgen.js"></script>
+<script src="runner.js"></script>
+<script src="inputscan.js"></script>
+<script src="notesgen.js"></script>
+<script>
+const $ = s => document.querySelector(s);
+const FONTS = LabPdf.fontList();
+const DEFAULTS = LabPdf.DEFAULTS;
+
+/* ---------- presets and themes ---------- */
+const PRESET_KEYS = ['margin','codeSize','lineExtra','padV','padH','taskGap','codeOutGap','radius'];
+const THEME_KEYS  = ['titleColor','infoColor','textColor','pageBg','codeBg','codeFg','outBg','outFg','borderColor','borderW'];
+const pick = (keys) => Object.fromEntries(keys.map(k => [k, DEFAULTS[k]]));
+
+const PRESETS = {
+  default:     { label: 'Default',            v: {} },
+  compact:     { label: 'Compact (fewer pages)', v: { margin:40, codeSize:7.5, lineExtra:1.5, padV:5, padH:6, taskGap:8, codeOutGap:3 } },
+  comfortable: { label: 'Comfortable',        v: { margin:60, codeSize:9, lineExtra:3.5, padV:14, padH:12, taskGap:20, codeOutGap:10, radius:4 } },
+  large:       { label: 'Large text',         v: { margin:50, codeSize:10.5, lineExtra:3, padV:12, padH:10, taskGap:18, codeOutGap:8 } },
+};
+const THEMES = {
+  classic: { label: 'Classic (blue)', v: {} },
+  light:   { label: 'Light', v: { titleColor:'#1a73e8', infoColor:'#3c4043', textColor:'#202124', pageBg:'#ffffff', codeBg:'#f6f8fa', codeFg:'#24292f', outBg:'#ffffff', outFg:'#24292f', borderColor:'#d0d7de', borderW:0.75 } },
+  print:   { label: 'Print (black & white)', v: { titleColor:'#000000', infoColor:'#000000', textColor:'#000000', pageBg:'#ffffff', codeBg:'#ffffff', codeFg:'#000000', outBg:'#f0f0f0', outFg:'#000000', borderColor:'#000000', borderW:0.75 } },
+  dark:    { label: 'Dark', v: { titleColor:'#8ab4f8', infoColor:'#bdc1c6', textColor:'#e8eaed', pageBg:'#202124', codeBg:'#2d2f33', codeFg:'#e8eaed', outBg:'#0f1012', outFg:'#e6e6e6', borderColor:'#3c4043', borderW:0 } },
+  forest:  { label: 'Forest', v: { titleColor:'#188038', infoColor:'#3c4043', textColor:'#1e3a29', pageBg:'#ffffff', codeBg:'#eef5ef', codeFg:'#1e3a29', outBg:'#12261a', outFg:'#d9efe0', borderColor:'#cccccc', borderW:0 } },
+  purple:  { label: 'Purple', v: { titleColor:'#7b2cbf', infoColor:'#3c4043', textColor:'#1f1233', pageBg:'#ffffff', codeBg:'#f4eefb', codeFg:'#1f1233', outBg:'#231338', outFg:'#eadcf8', borderColor:'#cccccc', borderW:0 } },
+  sunset:  { label: 'Sunset', v: { titleColor:'#d9480f', infoColor:'#4a3b32', textColor:'#2b1d14', pageBg:'#fffaf5', codeBg:'#fdeee0', codeFg:'#2b1d14', outBg:'#2b1d14', outFg:'#fde8d4', borderColor:'#cccccc', borderW:0 } },
+};
+const presetVals = p => ({ ...pick(PRESET_KEYS), ...PRESETS[p].v });
+const themeVals  = t => ({ ...pick(THEME_KEYS),  ...THEMES[t].v });
+
+/* ---------- state ---------- */
+let S = { ...DEFAULTS };
+try { Object.assign(S, JSON.parse(localStorage.getItem('lrm_opts') || '{}')); } catch (_) {}
+const save = () => { try { localStorage.setItem('lrm_opts', JSON.stringify(S)); } catch (_) {} };
+
+const same = (vals, skip) => Object.keys(vals).every(k => (skip && skip.includes(k)) || String(S[k]).toLowerCase() === String(vals[k]).toLowerCase());
+const currentPreset = () => Object.keys(PRESETS).find(p => same(presetVals(p))) || 'custom';
+const currentTheme  = () => Object.keys(THEMES).find(t => same(themeVals(t), S.syntax && S.syntax !== 'none' ? ['codeBg', 'codeFg'] : null)) || 'custom';
+
+/* syntax highlighting themes (see highlight.js) */
+const SYN = Highlight.list();
+const synVals = key => (key !== 'none' && Highlight.THEMES[key]) ? { syntax: key, codeBg: Highlight.THEMES[key].bg, codeFg: Highlight.THEMES[key].fg } : { syntax: 'none' };
+const optHtml = l => l.map(x => `<option value="${x.key}">${x.label}</option>`).join('');
+$('#syntax').innerHTML = '<option value="none">Off (plain black text)</option>'
+  + '<optgroup label="Light backgrounds">' + optHtml(SYN.filter(x => !x.dark)) + '</optgroup>'
+  + '<optgroup label="Dark backgrounds">' + optHtml(SYN.filter(x => x.dark)) + '</optgroup>';
+
+function fillSelect(sel, obj) {
+  sel.innerHTML = Object.entries(obj).map(([k, v]) => `<option value="${k}">${v.label}</option>`).join('')
+                + '<option value="custom">Custom</option>';
+}
+fillSelect($('#preset'), PRESETS);
+fillSelect($('#theme'), THEMES);
+
+/* ---------- customize panel (built from a schema) ---------- */
+const FONT_GROUPS = [['Built-in (always available)', f => !f.embedded], ['Sans-serif', f => f.embedded && f.kind === 'sans'], ['Serif', f => f.embedded && f.kind === 'serif'], ['Monospace', f => f.embedded && f.kind === 'mono']];
+const fontOpts = mono => {
+  const out = [];
+  for (const [g, test] of FONT_GROUPS) {
+    const items = FONTS.filter(f => (mono === null || f.mono === mono) && test(f)).map(f => ({ v: f.key, t: f.label }));
+    if (items.length) out.push({ group: g, items });
+  }
+  return out;
+};
+const SCHEMA = [
+  { group: 'Fonts', items: [
+    { k:'headFont', label:'Title & heading font', type:'select', options: fontOpts(null) },
+    { k:'codeFont', label:'Code & output font', type:'select', options: fontOpts(true) },
+    { k:'codeSize', label:'Code size', type:'range', min:6, max:12, step:0.5, unit:'pt' },
+    { k:'lineExtra', label:'Line spacing (extra)', type:'range', min:0, max:8, step:0.5, unit:'pt' },
+    { k:'headSize', label:'Task heading size', type:'range', min:10, max:22, step:1, unit:'pt' },
+    { k:'labelSize', label:'"Output" label size', type:'range', min:9, max:18, step:1, unit:'pt' },
+  ]},
+  { group: 'Padding & spacing', items: [
+    { k:'padV', label:'Box padding, top & bottom', type:'range', min:0, max:30, step:1, unit:'pt' },
+    { k:'padH', label:'Box padding, left & right', type:'range', min:0, max:30, step:1, unit:'pt' },
+    { k:'taskGap', label:'Space between tasks', type:'range', min:0, max:50, step:1, unit:'pt' },
+    { k:'codeOutGap', label:'Space between code and output', type:'range', min:0, max:30, step:1, unit:'pt' },
+    { k:'margin', label:'Page margin', type:'range', min:30, max:80, step:2, unit:'pt' },
+    { k:'radius', label:'Rounded corners', type:'range', min:0, max:12, step:1, unit:'pt' },
+    { k:'borderW', label:'Box border width', type:'range', min:0, max:2, step:0.25, unit:'pt' },
+    { k:'pageSize', label:'Page size', type:'select', options:[{v:'A4',t:'A4'},{v:'Letter',t:'US Letter'}] },
+  ]},
+  { group: 'Title page', items: [
+    { k:'showTitlePage', label:'Include title page', type:'check' },
+    { k:'titleAlign', label:'Alignment', type:'select', options:[{v:'center',t:'Centered'},{v:'left',t:'Left'}] },
+    { k:'titleSize', label:'Title size', type:'range', min:20, max:60, step:1, unit:'pt' },
+    { k:'infoSize', label:'Name / ID text size', type:'range', min:10, max:36, step:1, unit:'pt' },
+    { k:'titleTop', label:'Distance from top', type:'range', min:0, max:400, step:10, unit:'pt' },
+  ]},
+  { group: 'Colors', items: [
+    { k:'titleColor', label:'Title', type:'color' },
+    { k:'infoColor', label:'Name / ID text', type:'color' },
+    { k:'textColor', label:'Headings & labels', type:'color' },
+    { k:'pageBg', label:'Page background', type:'color' },
+    { k:'codeBg', label:'Code box', type:'color' },
+    { k:'codeFg', label:'Code text', type:'color' },
+    { k:'outBg', label:'Output box', type:'color' },
+    { k:'outFg', label:'Output text', type:'color' },
+    { k:'borderColor', label:'Border', type:'color' },
+  ]},
+  { group: 'Extras', items: [
+    { k:'taskWord', label:'Heading word (Task 1, Question 1, ...)', type:'text' },
+    { k:'outputWord', label:'Output label', type:'text' },
+    { k:'pageNumbers', label:'Page numbers', type:'select', options:[{v:'none',t:'None'},{v:'center',t:'Bottom center'},{v:'right',t:'Bottom right'}] },
+    { k:'lineNumbers', label:'Line numbers in code', type:'check' },
+    { k:'newPagePerTask', label:'Start each task on a new page', type:'check' },
+    { k:'keepOutput', label:'Keep output box on one page', type:'check' },
+  ]},
+];
+
+const refresh = {};  // key -> function that syncs the control from S
+function buildPanel() {
+  const root = $('#custom');
+  root.innerHTML = '';
+  for (const g of SCHEMA) {
+    root.insertAdjacentHTML('beforeend', `<h3>${g.group}</h3>`);
+    const grid = document.createElement('div');
+    grid.className = g.group === 'Colors' ? 'grid3' : 'grid';
+    for (const it of g.items) {
+      const box = document.createElement('div');
+      box.className = 'ctl' + (it.type === 'range' || it.type === 'check' ? '' : '');
+      let input;
+      if (it.type === 'select') {
+        box.innerHTML = `<label>${it.label}</label><select></select>`;
+        input = box.querySelector('select');
+        const opt1 = o => `<option value="${o.v}">${o.t}</option>`;
+        input.innerHTML = it.options.map(o => o.group ? `<optgroup label="${o.group}">${o.items.map(opt1).join('')}</optgroup>` : opt1(o)).join('');
+        input.onchange = () => set(it.k, input.value);
+        refresh[it.k] = () => { input.value = S[it.k]; };
+      } else if (it.type === 'range') {
+        box.innerHTML = `<label>${it.label}</label><div class="row"><input type="range" min="${it.min}" max="${it.max}" step="${it.step}"><span class="val"></span></div>`;
+        input = box.querySelector('input'); const val = box.querySelector('.val');
+        input.oninput = () => set(it.k, parseFloat(input.value));
+        refresh[it.k] = () => { input.value = S[it.k]; val.textContent = S[it.k] + ' ' + it.unit; };
+      } else if (it.type === 'color') {
+        box.innerHTML = `<label>${it.label}</label><input type="color">`;
+        input = box.querySelector('input');
+        input.oninput = () => set(it.k, input.value);
+        refresh[it.k] = () => { input.value = S[it.k]; };
+      } else if (it.type === 'check') {
+        box.innerHTML = `<label class="check"><input type="checkbox"> ${it.label}</label>`;
+        input = box.querySelector('input');
+        input.onchange = () => set(it.k, input.checked);
+        refresh[it.k] = () => { input.checked = !!S[it.k]; };
+      } else if (it.type === 'text') {
+        box.innerHTML = `<label>${it.label}</label><input type="text" maxlength="30">`;
+        input = box.querySelector('input');
+        input.oninput = () => set(it.k, input.value);
+        refresh[it.k] = () => { if (document.activeElement !== input) input.value = S[it.k]; };
+      }
+      grid.appendChild(box);
+    }
+    root.appendChild(grid);
+  }
+}
+
+function set(k, v) { S[k] = v; syncAll(); }
+function syncAll() {
+  for (const k in refresh) refresh[k]();
+  $('#preset').value = currentPreset();
+  $('#theme').value = currentTheme();
+  $('#syntax').value = (S.syntax in Highlight.THEMES) ? S.syntax : 'none';
+  save();
+  preview();
+}
+$('#preset').onchange = e => { if (e.target.value in PRESETS) { Object.assign(S, presetVals(e.target.value)); } syncAll(); };
+$('#theme').onchange  = e => { if (e.target.value in THEMES)  { Object.assign(S, themeVals(e.target.value)); if (S.syntax !== 'none') Object.assign(S, synVals(S.syntax)); } syncAll(); };
+$('#syntax').onchange = e => { Object.assign(S, synVals(e.target.value)); syncAll(); };
+$('#reset').onclick = () => { S = { ...DEFAULTS }; syncAll(); };
+
+/* ---------- live preview ---------- */
+window.onLabFontLoaded = () => preview();
+function cssFont(key) {
+  const f = FONTS.find(x => x.key === key) || FONTS[0];
+  if (f.embedded) {
+    LabFonts.load(f.key);   // fetch it (once); the preview redraws when it arrives
+    const fb = f.kind === 'mono' ? 'ui-monospace, "Courier New", monospace' : f.kind === 'serif' ? 'Georgia, "Times New Roman", serif' : 'Arial, Helvetica, sans-serif';
+    return `"LRM ${f.key}", ${fb}`;
+  }
+  const label = f.label === 'Times' ? '"Times New Roman", Times' : `"${f.label}"`;
+  return `${label}, ${f.mono ? 'ui-monospace, "Courier New", monospace' : 'Arial, Helvetica, sans-serif'}`;
+}
+function preview() {
+  const k = 0.8; // 1 pt -> 0.8 px, so the box looks like the page
+  const pv = $('#pv');
+  pv.style.background = S.pageBg;
+  pv.style.color = S.textColor;
+  pv.style.padding = (S.margin * k * 0.5) + 'px';
+  const hf = cssFont(S.headFont), cf = cssFont(S.codeFont);
+  const t = $('#pvTitle'), i = $('#pvInfo');
+  t.style.cssText = `font-family:${hf};font-size:${S.titleSize * 0.55}px;color:${S.titleColor};text-align:${S.titleAlign === 'left' ? 'left' : 'center'}`;
+  i.style.cssText = `font-family:${hf};font-size:${S.infoSize * 0.5}px;color:${S.infoColor};text-align:${S.titleAlign === 'left' ? 'left' : 'center'};margin-bottom:${S.taskGap * k}px`;
+  t.style.display = i.style.display = S.showTitlePage ? '' : 'none';
+  $('#pvHead').style.cssText = `font-family:${hf};font-size:${S.headSize * k * 1.1}px;margin:${S.taskGap * k * 0.5}px 0 5px`;
+  $('#pvLabel').style.cssText = `font-family:${hf};font-size:${S.labelSize * k * 1.1}px;margin:${(S.codeOutGap + 10) * k}px 0 4px`;
+  $('#pvHead').textContent = (S.taskWord || 'Task') + ' 1';
+  $('#pvLabel').textContent = S.outputWord || 'Output';
+  const code = ['#include <iostream>', 'using namespace std;', '', '// print a greeting', 'int main() {', '    int n = 3;', '    cout << "Hello! " << n;', '    return 0;', '}'];
+  const rows = S.lineNumbers ? code.map((l, n) => String(n + 1).padStart(2) + '  ' + l) : code;
+  const box = (el, bg, fg, text) => {
+    el.style.cssText = `font-family:${cf};font-size:${S.codeSize * k * 1.15}px;line-height:${(S.codeSize + S.lineExtra) * k * 1.15}px;` +
+      `background:${bg};color:${fg};padding:${S.padV * k}px ${S.padH * k}px;border-radius:${S.radius}px;` +
+      `border:${S.borderW > 0 ? S.borderW + 'px solid ' + S.borderColor : '0'}`;
+    el.textContent = text;
+  };
+  box($('#pvCode'), S.codeBg, S.codeFg, rows.join('\n'));
+  // colour the preview code the same way the PDF does
+  const pal = (S.syntax in Highlight.THEMES) ? Highlight.colors(S.syntax) : null;
+  if (pal) {
+    pal[0] = S.codeFg;
+    const full = rows.join('\n'), cls = Highlight.tokenize(full), el = $('#pvCode');
+    // line numbers are not part of the code, so tokenize the code alone and shift
+    const codeCls = Highlight.tokenize(code.join('\n'));
+    el.textContent = '';
+    let at = 0;
+    code.forEach((ln, n) => {
+      const pre = S.lineNumbers ? String(n + 1).padStart(2) + '  ' : '';
+      if (pre) { const sp = document.createElement('span'); sp.style.color = pal[Highlight.CLASSES.indexOf('lineno')]; sp.textContent = pre; el.append(sp); }
+      let a = 0;
+      while (a < ln.length) {
+        let b = a + 1;
+        while (b < ln.length && codeCls[at + b] === codeCls[at + a]) b++;
+        const sp = document.createElement('span'); sp.style.color = pal[codeCls[at + a]] || S.codeFg; sp.textContent = ln.slice(a, b); el.append(sp);
+        a = b;
+      }
+      if (n < code.length - 1) el.append('\n');
+      at += ln.length + 1;
+    });
+  }
+  box($('#pvOut'), S.outBg, S.outFg, 'Hello! 3');
+
+  /* second preview: algorithms / pseudocodes / dry runs PDF */
+  const pv2 = $('#pv2');
+  pv2.style.background = S.pageBg;
+  pv2.style.color = S.textColor;
+  pv2.style.padding = (S.margin * k * 0.5) + 'px';
+  const al = S.titleAlign === 'left' ? 'left' : 'center';
+  $('#pv2Title').style.cssText = `font-family:${hf};font-size:${S.titleSize * 0.55}px;color:${S.titleColor};text-align:${al}`;
+  $('#pv2Info').style.cssText = `font-family:${hf};font-size:${S.infoSize * 0.5}px;line-height:1.5;color:${S.infoColor};text-align:${al}`;
+  $('#pv2Title').style.display = $('#pv2Info').style.display = S.showTitlePage ? '' : 'none';
+  $('#pv2Page').style.borderColor = S.textColor;
+  syncTitleText();
+}
+
+buildPanel();
+syncAll();
+
+/* ---------- title-page fields ---------- */
+for (const id of ['title','name','sid','section','extra']) {
+  let saved = localStorage.getItem('lrm_' + id);
+  if (saved === 'Ch Muhammad Nabeel Sadiq' || saved === '260201074') { localStorage.removeItem('lrm_' + id); saved = null; }
+  if (saved !== null) $('#' + id).value = saved;
+  $('#' + id).addEventListener('input', e => { localStorage.setItem('lrm_' + id, e.target.value); });
+}
+function syncTitleText() {
+  $('#pvTitle').textContent = $('#title').value || 'PF LAB';
+  $('#pvInfo').textContent = [$('#name').value, $('#sid').value, $('#section').value, $('#extra').value].filter(Boolean).join('  \u00b7  ');
+  $('#pv2Title').textContent = $('#title').value || 'PF LAB';
+  const h = ($('#heading') && $('#heading').value) || 'Algorithms, Pseudocodes & Dry Runs';
+  const box = $('#pv2Info');
+  box.innerHTML = '';
+  [h, $('#name').value, $('#sid').value, $('#section').value, $('#extra').value].filter(Boolean).forEach(t => {
+    const d = document.createElement('div'); d.textContent = t; box.appendChild(d);
+  });
+}
+for (const id of ['title','name','sid','section','extra','heading']) { const el = $('#' + id); if (el) el.addEventListener('input', syncTitleText); }
+syncTitleText();
+
+/* ---------- files ---------- */
+const drop = $('#drop'), picker = $('#picker'), list = $('#list'), go = $('#go'), statusEl = $('#status');
+let items = []; // {file, usesInput, inputs}
+
+const taskNum = LabPdf.taskNumber;
+
+async function addFiles(fileList) {
+  for (const f of fileList) {
+    if (!/\.(cpp|cc|cxx|c\+\+)$/i.test(f.name)) continue;
+    if (items.some(i => i.file.name === f.name && i.file.size === f.size)) continue;
+    const text = await f.text();
+    let reads = [];
+    try { reads = InputScan.analyze(text); } catch (e) { console.warn('input scan failed for ' + f.name, e); }
+    items.push({
+      file: f,
+      usesInput: reads.length > 0 || /\b(cin|scanf|getline|gets|getchar|fgets)\b/.test(text),
+      text,               // the source code, for the "View code" section
+      codeOpen: false,
+      reads,              // detected inputs: { name, type, kind, loop, line, start, end, warn, value }
+      inputs: '',         // plain-text input (used when nothing was detected, or when edited by hand)
+      rawOverride: false,
+    });
+  }
+  render();
+  if (items.length) warmUp();
+}
+
+/* what the program will be given as input, one line per entry */
+function inputLinesOf(it) {
+  if (it.rawOverride || !it.reads.length) return it.inputs.split(/\r?\n/).map(l => l.trim()).filter(l => l !== '');
+  return InputScan.toLines(it.reads);
+}
+
+/* one row per detected input: variable name, data type, and a box for its value */
+function renderVars(div, it) {
+  const n = it.reads.length;
+  div.insertAdjacentHTML('beforeend', `
+    <div class="hint">Found <b>${n}</b> input${n === 1 ? '' : 's'} in this program, in the order the code reads them. Type the value for each one. If a variable is asked for again (a loop that repeats, like a wrong password then the right one), use <b>+ Add another value</b> to give it a value for every time it asks.</div>
+    <div class="vars"></div>
+    <details class="raw">
+      <summary>Edit as plain text</summary>
+      <div class="hint">One value per line, in the order the program asks. Use this if your program asks in a different order than the code lists them (branches, functions). Boxes above are ignored while you use this.</div>
+      <p class="rawnote" hidden>Using the plain text below instead of the boxes. <a href="#" class="useBoxes">Go back to the boxes</a></p>
+      <textarea placeholder="e.g.&#10;5"></textarea>
+    </details>`);
+  const vars = div.querySelector('.vars');
+  const raw = div.querySelector('.raw textarea');
+  const rawNote = div.querySelector('.rawnote');
+  const rawBox = div.querySelector('details.raw');
+
+  const syncRaw = () => {
+    if (it.rawOverride) { raw.value = it.inputs; rawBox.open = true; }
+    else raw.value = InputScan.toLines(it.reads).join('\n');
+    rawNote.hidden = !it.rawOverride;
+    div.classList.toggle('override', it.rawOverride);
+  };
+
+  it.reads.forEach((r, k) => {
+    const row = document.createElement('div');
+    row.className = 'var';
+
+    const lab = document.createElement('div');
+    lab.className = 'vlabel';
+    const nm = document.createElement('span'); nm.className = 'vname'; nm.textContent = r.name;
+    const ty = document.createElement('span'); ty.className = 'vtype' + (r.type === '?' ? ' unk' : ''); ty.textContent = r.type === '?' ? 'unknown type' : r.type;
+    const meta = document.createElement('span'); meta.className = 'vmeta';
+    meta.textContent = 'line ' + r.line
+      + (r.kind === 'line' ? ' · reads a whole line' : r.kind === 'char' ? ' · reads one character' : '')
+      + (r.loop ? ' · repeats in a loop' : '');
+    lab.append(nm, ty, meta);
+
+    /* one box per time the program asks for this variable */
+    if (!Array.isArray(r.values)) {
+      const have = String(r.value || '').split(/\r?\n/).map(x => x.trim()).filter(Boolean);
+      r.values = have.length ? have : (r.loop ? ['', ''] : ['']);
+    }
+    const stack = document.createElement('div');
+    stack.className = 'vstack';
+    const msg = document.createElement('div');
+    const boxes = [];
+
+    const commit = () => {
+      r.value = r.values.map(x => x.trim()).filter(Boolean).join('\n');
+      if (!it.rawOverride) raw.value = InputScan.toLines(it.reads).join('\n');
+    };
+    const validate = () => {
+      const problem = InputScan.check(r);
+      boxes.forEach(bx => {
+        const bad = !!problem && bx.value.trim() !== '' && InputScan.check({ ...r, value: bx.value, loop: true });
+        bx.classList.toggle('bad', !!bad);
+        bx.title = bad || '';
+      });
+      if (problem) { msg.className = 'vmsg bad'; msg.textContent = problem; if (!msg.parentNode) row.append(msg); }
+      else if (r.warn) { msg.className = 'vmsg warn'; msg.textContent = r.warn; if (!msg.parentNode) row.append(msg); }
+      else msg.remove();
+    };
+    const ord = n => n + 1;
+
+    const draw = () => {
+      stack.innerHTML = '';
+      boxes.length = 0;
+      const multi = r.values.length > 1 || r.loop;
+      if (multi) {
+        const cap = document.createElement('div');
+        cap.className = 'vcap';
+        cap.textContent = r.loop
+          ? 'The loop asks for this again each time it repeats. One box = one time it asks:'
+          : 'One box = one time the program asks for this:';
+        stack.append(cap);
+      }
+      r.values.forEach((val, n) => {
+        const line = document.createElement('div');
+        line.className = 'vitem';
+        if (multi) {
+          const tag = document.createElement('span');
+          tag.className = 'vnum'; tag.textContent = '#' + ord(n);
+          line.append(tag);
+        }
+        const inp = document.createElement('input');
+        inp.type = 'text';
+        inp.className = 'vval';
+        inp.dataset.r = k;
+        inp.placeholder = (multi && n > 0 && r.values.length > 1 && n === r.values.length - 1 && r.loop ? 'last value, e.g. ' : 'e.g. ') + (InputScan.placeholder({ ...r, loop: false }).replace(/^e\.g\. /, '') || 'value');
+        inp.value = val;
+        inp.spellcheck = false;
+        inp.setAttribute('aria-label', 'Value #' + ord(n) + ' for ' + r.name + ' (' + r.type + ')');
+        inp.oninput = () => { r.values[n] = inp.value; commit(); validate(); };
+        inp.onkeydown = e => {
+          if (e.key === 'Enter' && r.loop) { e.preventDefault(); addValue(n + 1); }
+          else if (e.key === 'Backspace' && inp.value === '' && r.values.length > 1) { e.preventDefault(); removeValue(n); }
+        };
+        boxes.push(inp);
+        line.append(inp);
+        if (r.values.length > 1) {
+          const x = document.createElement('button');
+          x.type = 'button'; x.className = 'vdel'; x.textContent = '\u00d7';
+          x.title = 'Remove this value';
+          x.setAttribute('aria-label', 'Remove value #' + ord(n));
+          x.onclick = () => removeValue(n);
+          line.append(x);
+        }
+        stack.append(line);
+      });
+      const add = document.createElement('button');
+      add.type = 'button'; add.className = 'vadd';
+      add.textContent = '+ Add another value';
+      add.onclick = () => addValue(r.values.length);
+      stack.append(add);
+      if (r.loop && r.values.length > 1) {
+        const note = document.createElement('div');
+        note.className = 'vnote';
+        note.textContent = 'Extra values the program never asks for are simply ignored.';
+        stack.append(note);
+      }
+      validate();
+    };
+    const addValue = at => { r.values.splice(at, 0, ''); draw(); const t = boxes[at]; if (t) t.focus(); };
+    const removeValue = n => {
+      r.values.splice(n, 1);
+      if (!r.values.length) r.values.push('');
+      commit(); draw();
+      const t = boxes[Math.max(0, n - 1)]; if (t) t.focus();
+    };
+
+    row.append(lab, stack);
+    if (r.warn) { msg.className = 'vmsg warn'; msg.textContent = r.warn; row.append(msg); }
+    draw();
+    vars.appendChild(row);
+  });
+
+  raw.oninput = () => { it.inputs = raw.value; it.rawOverride = true; rawNote.hidden = false; div.classList.add('override'); };
+  div.querySelector('.useBoxes').onclick = e => { e.preventDefault(); it.rawOverride = false; syncRaw(); };
+  syncRaw();
+}
+
+/* the whole source file, with the variables that get typed in highlighted */
+function renderCode(div, it) {
+  const rawLines = it.text.split('\n');
+  if (rawLines.length > 1 && rawLines[rawLines.length - 1] === '') rawLines.pop();
+  const marks = it.reads.map((r, k) => ({ s: r.start, e: r.end, k, r }))
+    .filter(m => m.s != null && m.e > m.s).sort((a, b) => a.s - b.s);
+  const nl = rawLines.length;
+
+  div.insertAdjacentHTML('beforeend', `
+    <details class="codeview">
+      <summary>View code <span class="cvmeta"></span></summary>
+      <div class="hint cvhint"></div>
+      <div class="codebox"></div>
+    </details>`);
+  const det = div.querySelector('.codeview');
+  const box = div.querySelector('.codebox');
+  div.querySelector('.cvmeta').textContent = '(' + nl + ' line' + (nl === 1 ? '' : 's') + (marks.length ? ', ' + marks.length + ' input' + (marks.length === 1 ? '' : 's') + ' highlighted' : '') + ')';
+  div.querySelector('.cvhint').textContent = marks.length
+    ? 'Highlighted: the variables you type values for above. Click one to jump to its box.'
+    : 'This program does not read any input.';
+
+  let built = false;
+  const build = () => {
+    if (built) return;
+    built = true;
+    const frag = document.createDocumentFragment();
+    let off = 0;
+    rawLines.forEach((ln, i) => {
+      const ls = off, end = ls + ln.length - (ln.endsWith('\r') ? 1 : 0);
+      off = ls + ln.length + 1;
+      const row = document.createElement('div'); row.className = 'cl';
+      const no = document.createElement('span'); no.className = 'ln'; no.textContent = i + 1;
+      const ct = document.createElement('span'); ct.className = 'ct';
+      let pos = ls;
+      for (const m of marks) {
+        if (m.e <= pos || m.s >= end) continue;
+        const s = Math.max(m.s, pos), e = Math.min(m.e, end);
+        if (s > pos) ct.append(it.text.slice(pos, s));
+        const mk = document.createElement('mark');
+        mk.className = 'rd'; mk.dataset.r = m.k;
+        mk.title = m.r.name + ' (' + m.r.type + ') - click to go to its box';
+        mk.textContent = it.text.slice(s, e);
+        ct.append(mk); pos = e; row.classList.add('has');
+      }
+      if (pos < end) ct.append(it.text.slice(pos, end));
+      if (!ct.firstChild) ct.textContent = ' ';
+      row.append(no, ct);
+      frag.appendChild(row);
+    });
+    box.appendChild(frag);
+  };
+  det.open = !!it.codeOpen;
+  if (det.open) build();
+  det.addEventListener('toggle', () => { it.codeOpen = det.open; if (det.open) build(); });
+
+  // box <-> code: focusing a box lights up its spot in the code, clicking the code jumps to the box
+  const setActive = (k, on) => {
+    box.querySelectorAll('mark.rd.active').forEach(x => x.classList.remove('active'));
+    if (!on || !det.open) return;
+    const mk = box.querySelector('mark.rd[data-r="' + k + '"]');
+    if (!mk) return;
+    mk.classList.add('active');
+    const m = mk.getBoundingClientRect(), b = box.getBoundingClientRect();
+    if (m.top < b.top) box.scrollTop -= b.top - m.top + 24;
+    else if (m.bottom > b.bottom) box.scrollTop += m.bottom - b.bottom + 24;
+    if (m.left < b.left) box.scrollLeft -= b.left - m.left + 40;
+    else if (m.right > b.right) box.scrollLeft += m.right - b.right + 40;
+  };
+  div.addEventListener('focusin', e => { if (e.target.classList && e.target.classList.contains('vval')) setActive(e.target.dataset.r, true); });
+  div.addEventListener('focusout', e => { if (e.target.classList && e.target.classList.contains('vval')) setActive(null, false); });
+  box.addEventListener('click', e => {
+    const mk = e.target.closest && e.target.closest('mark.rd');
+    if (!mk) return;
+    const inp = div.querySelector('.vval[data-r="' + mk.dataset.r + '"]');
+    if (!inp) return;
+    inp.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    inp.focus({ preventScroll: true });
+    inp.classList.add('flash');
+    setTimeout(() => inp.classList.remove('flash'), 1200);
+  });
+}
+
+function render() {
+  items.sort((a, b) => taskNum(a.file.name, 999) - taskNum(b.file.name, 999) || a.file.name.localeCompare(b.file.name));
+  list.innerHTML = '';
+  items.forEach((it, idx) => {
+    const div = document.createElement('div');
+    div.className = 'file';
+    const label = 'Task ' + taskNum(it.file.name, idx + 1);
+    div.innerHTML = `
+      <div class="file-head">
+        <div><span class="tag">${label}</span> <span class="file-name"></span></div>
+        <button class="rm" title="Remove">&times;</button>
+      </div>`;
+    div.querySelector('.file-name').textContent = it.file.name;
+    div.querySelector('.rm').onclick = () => { items.splice(idx, 1); render(); };
+    if (it.usesInput && it.reads.length) {
+      renderVars(div, it);
+    } else if (it.usesInput) {
+      div.insertAdjacentHTML('beforeend', `
+        <div class="hint">This program reads input, but the variables could not be detected. Type what the user should enter, one value per line, in the order it is asked:</div>
+        <textarea placeholder="e.g.&#10;5"></textarea>`);
+      const ta = div.querySelector('textarea');
+      ta.value = it.inputs;
+      ta.oninput = () => { it.inputs = ta.value; it.rawOverride = true; };
+    } else {
+      div.insertAdjacentHTML('beforeend', '<div class="none">No input needed.</div>');
+    }
+    renderCode(div, it);
+    list.appendChild(div);
+  });
+  go.disabled = items.length === 0;
+}
+
+drop.onclick = () => picker.click();
+picker.onchange = () => { addFiles([...picker.files]); picker.value = ''; };   // copy first: clearing the input empties the live list
+['dragenter','dragover'].forEach(e => drop.addEventListener(e, ev => { ev.preventDefault(); drop.classList.add('over'); }));
+['dragleave','drop'].forEach(e => drop.addEventListener(e, ev => { ev.preventDefault(); drop.classList.remove('over'); }));
+drop.addEventListener('drop', ev => addFiles(ev.dataTransfer.files));
+
+/* ---------- C++ engine (Clang in WebAssembly, runs in a Web Worker) ---------- */
+const engineEl = $('#engine');
+let engineReady = false;
+function engineStatus(text, frac) {
+  if (engineReady) return;
+  engineEl.hidden = false;
+  engineEl.className = 'warn info';
+  engineEl.innerHTML = '<span></span><div class="bar"><i></i></div>';
+  engineEl.querySelector('span').textContent = text + (frac != null ? ' ' + Math.round(frac * 100) + '%' : '');
+  engineEl.querySelector('i').style.width = (frac != null ? Math.round(frac * 100) : 100) + '%';
+}
+const runner = new CppRunner(engineStatus);
+let warming = null;
+function warmUp() {
+  if (!warming) {
+    warming = runner.load().then(() => {
+      engineReady = true;
+      engineEl.className = 'warn info';
+      engineEl.hidden = false;
+      engineEl.textContent = 'C++ compiler ready. Everything runs on this computer.';
+      setTimeout(() => { engineEl.hidden = true; }, 4000);
+    }).catch(err => {
+      warming = null;
+      engineEl.hidden = false;
+      engineEl.className = 'warn bad';
+      engineEl.textContent = 'The C++ compiler could not start: ' + err.message;
+    });
+  }
+  return warming;
+}
+
+/* ---------- generate ---------- */
+const showStatus = (cls, text, notes) => {
+  statusEl.className = cls;
+  statusEl.textContent = text;
+  (notes || []).forEach(n => {
+    const s = document.createElement('span');
+    s.className = 'note';
+    s.textContent = n;
+    statusEl.appendChild(s);
+  });
+};
+
+go.onclick = async () => {
+  go.disabled = true;
+  try {
+    const meta = {
+      title: $('#title').value.trim() || 'PF LAB',
+      name: $('#name').value.trim(),
+      id: $('#sid').value.trim(),
+      section: $('#section').value.trim(),
+      extra: $('#extra').value.trim(),
+    };
+    const opts = LabPdf.parseOptions(S);
+
+    // gather the files in the same order the page lists them
+    const list = [];
+    for (let idx = 0; idx < items.length; idx++) {
+      const it = items[idx];
+      const code = (await it.file.text()).replace(/\r\n/g, '\n').replace(/\s+$/, '');
+      const lines = inputLinesOf(it);
+      list.push({ num: taskNum(it.file.name, idx + 1), name: it.file.name, code, lines });
+    }
+    list.sort((a, b) => a.num - b.num || (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
+
+    showStatus('', 'Starting the C++ compiler (first time only)…');
+    await warmUp();
+    if (!engineReady) throw new Error('The C++ compiler is not available. See the message above.');
+
+    const tasks = [], notes = [];
+    for (let n = 0; n < list.length; n++) {
+      const t = list[n];
+      const head = `Task ${t.num} (${n + 1} of ${list.length})`;
+      showStatus('', `Compiling ${head}…`);
+      const r = await runner.run(t.code + '\n', t.lines, t.name,
+        phase => showStatus('', (phase === 'run' ? 'Running ' : 'Compiling ') + head + '…'));
+      tasks.push({ num: t.num, code: t.code, transcript: r.transcript });
+      if (r.note) notes.push(`${t.name}: ${r.note}.`);
+    }
+
+    showStatus('', 'Building the PDF…');
+    await new Promise(r => setTimeout(r, 30));          // let the status text paint
+    const badFonts = await LabPdf.prepareFonts(opts);
+    if (badFonts.length) notes.push('Font file could not be loaded (' + badFonts.join(', ') + '); a built-in font was used instead.');
+    const pdf = LabPdf.buildPdf(meta, tasks, opts);
+    pdf.save(LabPdf.reportFileName(meta));
+    showStatus('ok', 'Done. Your PDF has been downloaded.', notes);
+  } catch (e) {
+    showStatus('err', e.message || String(e));
+  } finally {
+    go.disabled = items.length === 0;
+  }
+};
+
+/* ---------- algorithms / dry-run images ---------- */
+const nDrop = $('#ndrop'), nPicker = $('#npicker'), nList = $('#nlist'), nGo = $('#ngo'), nStatus = $('#nstatus');
+const nOrder = $('#nOrder'), nInfo = $('#norderinfo');
+let nItems = [];     // { file, url }  in page order
+let nDrag = -1;
+
+for (const [id, key] of [['heading', 'lrm_heading'], ['nQuality', 'lrm_nq'], ['nMargin', 'lrm_nm'], ['nAlign', 'lrm_na']]) {
+  try { const v = localStorage.getItem(key); if (v !== null) $('#' + id).value = v; } catch (_) {}
+  $('#' + id).addEventListener('input', e => { try { localStorage.setItem(key, e.target.value); } catch (_) {} });
+}
+syncTitleText();
+const syncMargin = () => { $('#nMarginVal').textContent = $('#nMargin').value + ' pt'; };
+$('#nMargin').addEventListener('input', syncMargin); syncMargin();
+
+const isImage = f => /^image\//.test(f.type) || /\.(jpe?g|png|webp|gif|bmp|avif|heic|heif)$/i.test(f.name);
+
+function nAdd(files) {
+  for (const f of files) {
+    if (!isImage(f)) continue;
+    if (nItems.some(i => i.file.name === f.name && i.file.size === f.size && i.file.lastModified === f.lastModified)) continue;
+    nItems.push({ file: f, url: URL.createObjectURL(f) });
+  }
+  nApplyOrder();
+}
+
+/* sort by the chosen rule (unless the user arranges them by hand) */
+let nLabels = new Map();
+function nApplyOrder() {
+  const mode = nOrder.value;
+  const r = NotesPdf.order(nItems.map(i => ({ name: i.file.name, modified: i.file.lastModified })), mode === 'manual' ? 'none' : mode);
+  nLabels = new Map(nItems.map((it, k) => [it, r.labels[k] || '']));
+  if (mode !== 'manual') nItems = r.indices.map(k => nItems[k]);
+  if (!nItems.length) nInfo.hidden = true;
+  else {
+    nInfo.hidden = false;
+    nInfo.textContent = mode === 'manual'
+      ? 'Pages are in the order you arranged them. Drag the rows or use the arrows to change it.'
+      : 'Ordered by ' + NotesPdf.METHOD_TEXT[r.method] + '. Not right? Pick another rule above, or drag the rows / use the arrows.';
+  }
+  nRender();
+}
+nOrder.onchange = nApplyOrder;
+
+function nMove(from, to) {
+  if (to < 0 || to >= nItems.length || from === to) return;
+  const [it] = nItems.splice(from, 1);
+  nItems.splice(to, 0, it);
+  if (nOrder.value !== 'manual') { nOrder.value = 'manual'; nInfo.textContent = ''; }
+  nApplyOrder();
+}
+
+function nRender() {
+  nList.innerHTML = '';
+  nItems.forEach((it, idx) => {
+    const row = document.createElement('div');
+    row.className = 'nrow';
+    row.draggable = true;
+    row.innerHTML = `<span class="grip" title="Drag to reorder">&#8942;&#8942;</span><span class="npos"></span><img class="nthumb" alt=""><div><div class="nname"></div><div class="ninfo"></div></div>
+      <div class="nbtns"><button class="up" title="Move up">&#8593;</button><button class="down" title="Move down">&#8595;</button><button class="del" title="Remove">&times;</button></div>`;
+    row.querySelector('.npos').textContent = idx + 1;
+    row.querySelector('.nthumb').src = it.url;
+    row.querySelector('.nname').textContent = it.file.name;
+    row.querySelector('.ninfo').textContent = nLabels.get(it) || '';
+    row.querySelector('.up').disabled = idx === 0;
+    row.querySelector('.down').disabled = idx === nItems.length - 1;
+    row.querySelector('.up').onclick = () => nMove(idx, idx - 1);
+    row.querySelector('.down').onclick = () => nMove(idx, idx + 1);
+    row.querySelector('.del').onclick = () => { URL.revokeObjectURL(it.url); nItems.splice(idx, 1); nApplyOrder(); };
+    row.ondragstart = e => { nDrag = idx; row.classList.add('dragging'); e.dataTransfer.effectAllowed = 'move'; try { e.dataTransfer.setData('text/plain', String(idx)); } catch (_) {} };
+    row.ondragend = () => { nDrag = -1; row.classList.remove('dragging'); nList.querySelectorAll('.target').forEach(x => x.classList.remove('target')); };
+    row.ondragover = e => { if (nDrag >= 0) { e.preventDefault(); row.classList.add('target'); } };
+    row.ondragleave = () => row.classList.remove('target');
+    row.ondrop = e => { if (nDrag < 0) return; e.preventDefault(); e.stopPropagation(); const from = nDrag; nDrag = -1; nMove(from, idx); };
+    nList.appendChild(row);
+  });
+  nGo.disabled = nItems.length === 0;
+}
+
+nDrop.onclick = () => nPicker.click();
+nPicker.onchange = () => { nAdd([...nPicker.files]); nPicker.value = ''; };
+['dragenter','dragover'].forEach(e => nDrop.addEventListener(e, ev => { if (nDrag < 0) { ev.preventDefault(); nDrop.classList.add('over'); } }));
+['dragleave','drop'].forEach(e => nDrop.addEventListener(e, ev => { ev.preventDefault(); nDrop.classList.remove('over'); }));
+nDrop.addEventListener('drop', ev => nAdd([...ev.dataTransfer.files]));
+
+const nShow = (cls, text) => { nStatus.className = cls; nStatus.textContent = text; };
+
+nGo.onclick = async () => {
+  nGo.disabled = true;
+  try {
+    const meta = {
+      title: $('#title').value.trim() || 'PF LAB',
+      name: $('#name').value.trim(),
+      id: $('#sid').value.trim(),
+      section: $('#section').value.trim(),
+      extra: $('#extra').value.trim(),
+    };
+    const heading = $('#heading').value.trim();
+    const opts = LabPdf.parseOptions(S);
+
+    const pages = [];
+    for (let i = 0; i < nItems.length; i++) {
+      nShow('', `Preparing image ${i + 1} of ${nItems.length}…`);
+      await new Promise(r => setTimeout(r, 0));            // let the status text paint
+      pages.push(await NotesPdf.prepareImage(nItems[i].file, $('#nQuality').value));
+    }
+    nShow('', 'Building the PDF…');
+    await new Promise(r => setTimeout(r, 30));
+    await LabPdf.prepareFonts(opts);
+    const pdf = NotesPdf.buildPdf(meta, heading, pages, opts, { margin: +$('#nMargin').value, valign: $('#nAlign').value });
+    pdf.save(NotesPdf.fileName(meta, heading));
+    nShow('ok', `Done. ${pages.length} image${pages.length === 1 ? '' : 's'} saved as a PDF.`);
+  } catch (e) {
+    nShow('err', e.message || String(e));
+  } finally {
+    nGo.disabled = nItems.length === 0;
+  }
+};
+</script>
+</body>
+</html>
